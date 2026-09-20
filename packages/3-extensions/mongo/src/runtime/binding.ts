@@ -48,13 +48,28 @@ type MongoBindingFields = {
   readonly mongoClient?: MongoDriverClient;
 };
 
-const SEED_LIST = /^([^:]+:\/\/(?:[^/?#]*@)?[^/?#,]+),[^/?#]*/;
+const AUTHORITY_END_PATTERN = /[/?#]/;
 
-// `new URL` rejects a seed list like `host1:27017,host2:27017`, reading everything
-// after the first colon as the port. Only the scheme and database path matter here,
-// so parse without the extra hosts; the driver still receives the original URL.
+/**
+ * `new URL` rejects a seed list like `host1:27017,host2:27017`, reading everything
+ * after the first colon as the port. Only the scheme and database path matter here,
+ * so parse without the extra hosts; the driver still receives the original URL.
+ */
 function collapseSeedList(url: string): string {
-  return url.replace(SEED_LIST, '$1');
+  const schemeEnd = url.indexOf('://');
+  if (schemeEnd === -1) {
+    return url;
+  }
+  const authorityStart = schemeEnd + 3;
+  const delimiter = url.slice(authorityStart).search(AUTHORITY_END_PATTERN);
+  const authorityEnd = delimiter === -1 ? url.length : authorityStart + delimiter;
+  const authority = url.slice(authorityStart, authorityEnd);
+  // A password may contain a comma, so only look for the seed list after the userinfo.
+  const comma = authority.indexOf(',', authority.lastIndexOf('@') + 1);
+  if (comma === -1) {
+    return url;
+  }
+  return url.slice(0, authorityStart + comma) + url.slice(authorityEnd);
 }
 
 function validateMongoUrl(url: string): URL {

@@ -187,6 +187,24 @@ describe('mongo() facade', () => {
     expect(mocks.driverFromConnection).toHaveBeenCalledWith(url, 'absensi');
   });
 
+  it('accepts a bracketed IPv6 seed list url', async () => {
+    const url = 'mongodb://[::1]:27017,[::2]:27017/db';
+    const db = mongo({ contract: fakeContract, url });
+
+    await db.runtime();
+
+    expect(mocks.driverFromConnection).toHaveBeenCalledWith(url, 'db');
+  });
+
+  it('accepts a single-host url whose password contains a comma', async () => {
+    const url = 'mongodb://user:pa,ss@host1:27017/db';
+    const db = mongo({ contract: fakeContract, url });
+
+    await db.runtime();
+
+    expect(mocks.driverFromConnection).toHaveBeenCalledWith(url, 'db');
+  });
+
   it('accepts a pre-built mongoClient and uses fromDb', async () => {
     const fakeClient = { db: vi.fn().mockReturnValue({ id: 'db-handle' }) };
     const db = mongo({
@@ -265,6 +283,12 @@ describe('mongo() facade', () => {
 
   it('throws for a url without a dbName in the path', () => {
     expect(() => mongo({ contract: fakeContract, url: 'mongodb://localhost:27017' })).toThrow(
+      'Mongo URL must include a database name',
+    );
+  });
+
+  it('throws for a seed list url without a dbName in the path', () => {
+    expect(() => mongo({ contract: fakeContract, url: 'mongodb://h1:27017,h2:27017' })).toThrow(
       'Mongo URL must include a database name',
     );
   });
