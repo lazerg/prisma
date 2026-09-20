@@ -48,6 +48,15 @@ type MongoBindingFields = {
   readonly mongoClient?: MongoDriverClient;
 };
 
+const SEED_LIST = /^([^:]+:\/\/(?:[^/?#]*@)?[^/?#,]+),[^/?#]*/;
+
+// `new URL` rejects a seed list like `host1:27017,host2:27017`, reading everything
+// after the first colon as the port. Only the scheme and database path matter here,
+// so parse without the extra hosts; the driver still receives the original URL.
+function collapseSeedList(url: string): string {
+  return url.replace(SEED_LIST, '$1');
+}
+
 function validateMongoUrl(url: string): URL {
   const trimmed = url.trim();
   if (trimmed.length === 0) {
@@ -56,7 +65,7 @@ function validateMongoUrl(url: string): URL {
 
   let parsed: URL;
   try {
-    parsed = new URL(trimmed);
+    parsed = new URL(collapseSeedList(trimmed));
   } catch {
     throw mongoError('RUNTIME.BINDING_INVALID', 'Mongo URL must be a valid URL');
   }

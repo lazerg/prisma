@@ -177,6 +177,16 @@ describe('mongo() facade', () => {
     );
   });
 
+  it('accepts a multi-host seed list url and forwards it unchanged', async () => {
+    const url =
+      'mongodb://user:password@host1:27017,host2:27017,host3:27017/absensi?replicaSet=my-replica-set';
+    const db = mongo({ contract: fakeContract, url });
+
+    await db.runtime();
+
+    expect(mocks.driverFromConnection).toHaveBeenCalledWith(url, 'absensi');
+  });
+
   it('accepts a pre-built mongoClient and uses fromDb', async () => {
     const fakeClient = { db: vi.fn().mockReturnValue({ id: 'db-handle' }) };
     const db = mongo({
