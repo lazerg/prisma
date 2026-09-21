@@ -44,9 +44,9 @@ Your project's `tsconfig.json` must set:
 }
 ```
 
-`"module": "node16"` with `"moduleResolution": "node16"`, and `"module": "nodenext"` with `"moduleResolution": "nodenext"`, work too — so a project already on one of those pairs keeps it.
+`"module": "nodenext"` with `"moduleResolution": "nodenext"` works too, so a project already on that pair keeps it.
 
-The `prisma orm init` command configures these automatically. If you are integrating Prisma 8 into an existing project, `prisma orm init` merges the options your `tsconfig.json` is missing and leaves the resolution mode you already chose alone.
+The `prisma orm init` command configures these automatically. If you are integrating Prisma 8 into an existing project, `prisma orm init` merges the options your `tsconfig.json` is missing and leaves a supported pair alone.
 
 ## Module system
 

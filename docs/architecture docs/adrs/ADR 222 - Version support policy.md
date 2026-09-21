@@ -24,7 +24,7 @@ The ratified floor table:
 Additional constraints (documented, no enforcement overhead needed):
 
 - **Module system**: ESM-only. No CommonJS entry points are published.
-- **Consumer `tsconfig`**: `moduleResolution: "bundler"` and `strict: true` are required. The `prisma-next init` CLI configures these automatically.
+- **Consumer `tsconfig`**: `strict: true` is required, with `moduleResolution: "bundler"` or `"nodenext"` (each paired with a `module` value TypeScript accepts). The `prisma-next init` CLI configures these automatically.
 
 ---
 

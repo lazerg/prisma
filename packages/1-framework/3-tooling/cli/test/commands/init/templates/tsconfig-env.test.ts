@@ -82,35 +82,27 @@ describe('mergeTsConfig', () => {
     expect(merged.compilerOptions.types).toEqual(['node']);
   });
 
-  it('keeps a module resolution the scaffold already typechecks under', () => {
-    const existing = JSON.stringify({
-      compilerOptions: { module: 'nodenext', moduleResolution: 'nodenext' },
-    });
-    const merged = JSON.parse(mergeTsConfig(existing)) as {
+  it.each([
+    { module: 'nodenext', moduleResolution: 'nodenext' },
+    { module: 'NodeNext', moduleResolution: 'NodeNext' },
+  ])('keeps a pair the scaffold already typechecks under: %j', (compilerOptions) => {
+    const merged = JSON.parse(mergeTsConfig(JSON.stringify({ compilerOptions }))) as {
       compilerOptions: Record<string, unknown>;
     };
-    expect(merged.compilerOptions['module']).toBe('nodenext');
-    expect(merged.compilerOptions['moduleResolution']).toBe('nodenext');
-    expect(merged.compilerOptions['resolveJsonModule']).toBe(true);
-  });
-
-  it('replaces a module resolution the scaffold cannot resolve under', () => {
-    const existing = JSON.stringify({
-      compilerOptions: { module: 'commonjs', moduleResolution: 'node' },
+    expect(merged.compilerOptions).toMatchObject({
+      ...compilerOptions,
+      resolveJsonModule: true,
     });
-    const merged = JSON.parse(mergeTsConfig(existing)) as {
-      compilerOptions: Record<string, unknown>;
-    };
-    expect(merged.compilerOptions['module']).toBe('preserve');
-    expect(merged.compilerOptions['moduleResolution']).toBe('bundler');
   });
 
   it.each([
-    { compilerOptions: { moduleResolution: 'nodenext' } },
-    { compilerOptions: { module: 'esnext', moduleResolution: 'nodenext' } },
-    { compilerOptions: { module: 'commonjs', moduleResolution: 'bundler' } },
-  ])('replaces a pair TypeScript itself rejects: %j', (existing) => {
-    const merged = JSON.parse(mergeTsConfig(JSON.stringify(existing))) as {
+    { module: 'commonjs', moduleResolution: 'node' },
+    { moduleResolution: 'nodenext' },
+    { module: 'esnext', moduleResolution: 'nodenext' },
+    { module: 'commonjs', moduleResolution: 'bundler' },
+    { module: 'node16', moduleResolution: 'node16' },
+  ])('replaces a pair the scaffold cannot typecheck under: %j', (compilerOptions) => {
+    const merged = JSON.parse(mergeTsConfig(JSON.stringify({ compilerOptions }))) as {
       compilerOptions: Record<string, unknown>;
     };
     expect(merged.compilerOptions).toMatchObject({
