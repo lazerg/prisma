@@ -532,7 +532,7 @@ testMatrix.setupTestSuite(
         }, options)
       }, options)
 
-      expect(options).toEqual({ maxWait: 5000, timeout: 5000 })
+      expect(options).toStrictEqual({ maxWait: 5000, timeout: 5000 })
 
       await prisma.$transaction(async (tx) => {
         await tx.user.create({ data: { email: email2 } })
