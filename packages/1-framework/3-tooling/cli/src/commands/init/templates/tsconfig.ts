@@ -44,6 +44,10 @@ const MODULE_COMPILER_OPTIONS: readonly string[] = ['module', 'moduleResolution'
  * own pair. `db.ts` spells its type import `./contract.js`, which
  * resolves to the emitted `contract.d.ts` under both.
  *
+ * Node 18 and Node 20 projects resolve under `moduleResolution:
+ * 'node16'` — TypeScript has no `node18` or `node20` resolution mode —
+ * and under `'nodenext'` as well.
+ *
  * Only whole pairs count: TypeScript rejects a mismatched one (TS5110,
  * TS5095), so a project carrying half of one still gets the required
  * defaults. So does one on `module: 'node16'`, which predates import
@@ -52,7 +56,8 @@ const MODULE_COMPILER_OPTIONS: readonly string[] = ['module', 'moduleResolution'
  */
 const SUPPORTED_MODULE_PAIRS: Readonly<Record<string, readonly string[]>> = {
   bundler: ['preserve', 'esnext'],
-  nodenext: ['nodenext'],
+  node16: ['node18', 'node20'],
+  nodenext: ['nodenext', 'node18', 'node20'],
 };
 
 export function defaultTsConfig(): string {

@@ -85,6 +85,10 @@ describe('mergeTsConfig', () => {
   it.each([
     { module: 'nodenext', moduleResolution: 'nodenext' },
     { module: 'NodeNext', moduleResolution: 'NodeNext' },
+    { module: 'node18', moduleResolution: 'node16' },
+    { module: 'node20', moduleResolution: 'node16' },
+    { module: 'node18', moduleResolution: 'nodenext' },
+    { module: 'node20', moduleResolution: 'nodenext' },
   ])('keeps a pair the scaffold already typechecks under: %j', (compilerOptions) => {
     const merged = JSON.parse(mergeTsConfig(JSON.stringify({ compilerOptions }))) as {
       compilerOptions: Record<string, unknown>;
