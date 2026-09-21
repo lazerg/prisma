@@ -82,6 +82,29 @@ describe('mergeTsConfig', () => {
     expect(merged.compilerOptions.types).toEqual(['node']);
   });
 
+  it('keeps a module resolution the scaffold already typechecks under', () => {
+    const existing = JSON.stringify({
+      compilerOptions: { module: 'nodenext', moduleResolution: 'nodenext' },
+    });
+    const merged = JSON.parse(mergeTsConfig(existing)) as {
+      compilerOptions: Record<string, unknown>;
+    };
+    expect(merged.compilerOptions['module']).toBe('nodenext');
+    expect(merged.compilerOptions['moduleResolution']).toBe('nodenext');
+    expect(merged.compilerOptions['resolveJsonModule']).toBe(true);
+  });
+
+  it('replaces a module resolution the scaffold cannot resolve under', () => {
+    const existing = JSON.stringify({
+      compilerOptions: { module: 'commonjs', moduleResolution: 'node' },
+    });
+    const merged = JSON.parse(mergeTsConfig(existing)) as {
+      compilerOptions: Record<string, unknown>;
+    };
+    expect(merged.compilerOptions['module']).toBe('preserve');
+    expect(merged.compilerOptions['moduleResolution']).toBe('bundler');
+  });
+
   it('is idempotent on a previously-merged config', () => {
     const first = mergeTsConfig(JSON.stringify({ compilerOptions: { strict: true } }));
     const second = mergeTsConfig(first);
