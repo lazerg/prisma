@@ -39,13 +39,20 @@ export const REQUIRED_COMPILER_OPTIONS_TYPES: readonly string[] = ['node'];
 const MODULE_COMPILER_OPTIONS: readonly string[] = ['module', 'moduleResolution'];
 
 /**
- * Resolution modes the scaffold already typechecks under, so a project
- * that has picked one keeps its own `module` / `moduleResolution`.
- * `db.ts` spells its type import `./contract.js`, which resolves to the
- * emitted `contract.d.ts` under all three, and the facades publish
- * `exports` that `node16` / `nodenext` read the same way `bundler` does.
+ * The `module` values that go with each resolution mode the scaffold
+ * already typechecks under, so a project that has picked one keeps its
+ * own pair. `db.ts` spells its type import `./contract.js`, which
+ * resolves to the emitted `contract.d.ts` under all three.
+ *
+ * Only whole pairs count: TypeScript rejects a mismatched one (TS5110,
+ * TS5095), so a project carrying half of one — or a `module` we have
+ * not checked the scaffold against — still gets the required defaults.
  */
-const SUPPORTED_MODULE_RESOLUTIONS: readonly string[] = ['bundler', 'node16', 'nodenext'];
+const SUPPORTED_MODULE_PAIRS: Readonly<Record<string, readonly string[]>> = {
+  bundler: ['preserve', 'esnext'],
+  node16: ['node16'],
+  nodenext: ['nodenext'],
+};
 
 export function defaultTsConfig(): string {
   return JSON.stringify(
@@ -107,8 +114,8 @@ function formatTsConfigParseErrors(errors: readonly ParseError[]): string {
  * The caller must catch this and surface a structured error before
  * writing any scaffold files (FR6.2 atomicity).
  *
- * A project already on a `SUPPORTED_MODULE_RESOLUTIONS` mode keeps its
- * own `module` / `moduleResolution`: rewriting a framework-owned config
+ * A project already on a `SUPPORTED_MODULE_PAIRS` pair keeps its own
+ * `module` / `moduleResolution`: rewriting a framework-owned config
  * (NestJS, Next.js, Angular all ship `nodenext`) buys nothing the
  * scaffold needs, and the options a project never set are still added.
  */
@@ -126,7 +133,7 @@ export function mergeTsConfig(existing: string): string {
   };
 
   const compilerOptions = config['compilerOptions'] as Record<string, unknown> | undefined;
-  const keepModuleOptions = resolvesScaffoldImports(compilerOptions?.['moduleResolution']);
+  const keepModuleOptions = resolvesScaffoldImports(compilerOptions);
 
   let result = existing;
   for (const [key, value] of Object.entries(REQUIRED_COMPILER_OPTIONS)) {
@@ -175,11 +182,14 @@ export function parseTsConfigText(text: string): {
   return { config: value as Record<string, unknown> };
 }
 
-function resolvesScaffoldImports(moduleResolution: unknown): boolean {
-  return (
-    typeof moduleResolution === 'string' &&
-    SUPPORTED_MODULE_RESOLUTIONS.includes(moduleResolution.toLowerCase())
-  );
+function resolvesScaffoldImports(compilerOptions: Record<string, unknown> | undefined): boolean {
+  const moduleResolution = compilerOptions?.['moduleResolution'];
+  const moduleOption = compilerOptions?.['module'];
+  if (typeof moduleResolution !== 'string' || typeof moduleOption !== 'string') {
+    return false;
+  }
+  const supportedModules = SUPPORTED_MODULE_PAIRS[moduleResolution.toLowerCase()] ?? [];
+  return supportedModules.includes(moduleOption.toLowerCase());
 }
 
 function detectIndent(text: string): number {

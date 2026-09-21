@@ -105,6 +105,20 @@ describe('mergeTsConfig', () => {
     expect(merged.compilerOptions['moduleResolution']).toBe('bundler');
   });
 
+  it.each([
+    { compilerOptions: { moduleResolution: 'nodenext' } },
+    { compilerOptions: { module: 'esnext', moduleResolution: 'nodenext' } },
+    { compilerOptions: { module: 'commonjs', moduleResolution: 'bundler' } },
+  ])('replaces a pair TypeScript itself rejects: %j', (existing) => {
+    const merged = JSON.parse(mergeTsConfig(JSON.stringify(existing))) as {
+      compilerOptions: Record<string, unknown>;
+    };
+    expect(merged.compilerOptions).toMatchObject({
+      module: 'preserve',
+      moduleResolution: 'bundler',
+    });
+  });
+
   it('is idempotent on a previously-merged config', () => {
     const first = mergeTsConfig(JSON.stringify({ compilerOptions: { strict: true } }));
     const second = mergeTsConfig(first);
