@@ -74,14 +74,18 @@ function validateMongoUrl(url: string): ConnectionString {
 }
 
 function extractDbNameFromUrl(parsed: ConnectionString): string | undefined {
-  // pathname is "/dbname" or "" — strip the leading slash. Anything past
-  // a second slash is invalid for our purposes (auth-source style paths).
-  const path = parsed.pathname.startsWith('/') ? parsed.pathname.slice(1) : parsed.pathname;
-  if (path.length === 0) {
+  // pathname is "/dbname" or "/". Anything past a second slash is invalid
+  // for our purposes (auth-source style paths).
+  const [encodedDbName = ''] = parsed.pathname.slice(1).split('/');
+  if (encodedDbName.length === 0) {
     return undefined;
   }
-  const slash = path.indexOf('/');
-  return slash === -1 ? path : path.slice(0, slash);
+  // The driver decodes the path too; the control plane uses the name it produces.
+  try {
+    return decodeURIComponent(encodedDbName);
+  } catch {
+    throw mongoError('RUNTIME.BINDING_INVALID', 'Mongo URL must be a valid URL');
+  }
 }
 
 export function resolveMongoBinding(options: MongoBindingInput): MongoBinding {

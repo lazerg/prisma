@@ -43,6 +43,22 @@ describe('resolveMongoBinding with a connection string', () => {
     });
   });
 
+  it.each([
+    ['a non-ASCII database name', 'mongodb://host1:27017/données'],
+    ['a percent-encoded database name', 'mongodb://host1:27017,host2:27017/donn%C3%A9es'],
+  ])('decodes %s the way the driver does', (_name, url) => {
+    expect(resolveMongoBinding({ url })).toEqual({ kind: 'url', url, dbName: 'données' });
+  });
+
+  it('rejects a database name with malformed percent-encoding', () => {
+    expect(() => resolveMongoBinding({ url: 'mongodb://host1:27017/%E0%A4%A' })).toThrow(
+      expect.objectContaining({
+        code: 'RUNTIME.BINDING_INVALID',
+        message: 'Mongo URL must be a valid URL',
+      }),
+    );
+  });
+
   it('rejects a seed list without a database name in the path', () => {
     expect(() => resolveMongoBinding({ url: 'mongodb://h1:27017,h2:27017' })).toThrow(
       expect.objectContaining({
