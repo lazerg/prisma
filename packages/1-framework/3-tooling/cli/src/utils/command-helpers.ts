@@ -7,6 +7,12 @@ import { APP_SPACE_ID, spaceMigrationDirectory } from '@internal/migration-tools
 import { relative, resolve } from 'pathe';
 import type { ControlClient } from '../control-api/types';
 import { CliStructuredError, errorRuntime } from './cli-errors';
+import {
+  hasUrlScheme,
+  redactUrlCredentials,
+  type UrlUserinfo,
+  urlUserinfo,
+} from './url-credentials';
 
 /**
  * Resolves the absolute path to contract.json from the config.
@@ -195,7 +201,8 @@ export async function readContractEnvelope(config: {
 
 /**
  * Masks credentials in a database connection URL.
- * Handles standard URLs (username + password + query params) and libpq-style key=value strings.
+ * Handles standard URLs (username + password + query params), URLs `new URL` rejects (such as
+ * multi-host URLs), and libpq-style key=value strings.
  */
 export function maskConnectionUrl(url: string): string {
   try {
@@ -214,10 +221,7 @@ export function maskConnectionUrl(url: string): string {
     }
     return parsed.toString();
   } catch {
-    // Fallback for libpq-style key=value connection strings (e.g., "host=localhost password=secret user=admin")
-    return url
-      .replace(/password\s*=\s*\S+/gi, 'password=****')
-      .replace(/user\s*=\s*\S+/gi, 'user=****');
+    return hasUrlScheme(url) ? redactUrlCredentials(url) : maskKeyValueCredentials(url);
   }
 }
 
@@ -229,23 +233,31 @@ export function sanitizeErrorMessage(message: string, connectionUrl?: string): s
   if (!connectionUrl) {
     return message;
   }
-  try {
-    const parsed = new URL(connectionUrl);
-    // Replace the full URL (with and without trailing slash)
-    let sanitized = message;
-    sanitized = sanitized.replaceAll(connectionUrl, maskConnectionUrl(connectionUrl));
-    // Also replace the password and username individually if they appear
-    if (parsed.password) {
-      sanitized = sanitized.replaceAll(parsed.password, '****');
-    }
-    if (parsed.username) {
-      sanitized = sanitized.replaceAll(parsed.username, '****');
-    }
-    return sanitized;
-  } catch {
-    // For libpq-style strings, mask password and user values in the message
-    return message
-      .replace(/password\s*=\s*\S+/gi, 'password=****')
-      .replace(/user\s*=\s*\S+/gi, 'user=****');
+  const credentials = connectionUrlCredentials(connectionUrl);
+  if (credentials === undefined) {
+    return maskKeyValueCredentials(message);
   }
+  let sanitized = message.replaceAll(connectionUrl, maskConnectionUrl(connectionUrl));
+  if (credentials.password) {
+    sanitized = sanitized.replaceAll(credentials.password, '****');
+  }
+  if (credentials.username) {
+    sanitized = sanitized.replaceAll(credentials.username, '****');
+  }
+  return sanitized;
+}
+
+function connectionUrlCredentials(connectionUrl: string): UrlUserinfo | undefined {
+  try {
+    const { username, password } = new URL(connectionUrl);
+    return { username, password };
+  } catch {
+    return hasUrlScheme(connectionUrl) ? urlUserinfo(connectionUrl) : undefined;
+  }
+}
+
+function maskKeyValueCredentials(text: string): string {
+  return text
+    .replace(/password\s*=\s*\S+/gi, 'password=****')
+    .replace(/user\s*=\s*\S+/gi, 'user=****');
 }
