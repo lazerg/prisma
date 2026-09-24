@@ -21,12 +21,58 @@ describe('resolveMongoBinding with a connection string', () => {
     expect(resolveMongoBinding({ url })).toEqual({ kind: 'url', url, dbName: 'db' });
   });
 
+  it('accepts a seed list whose credentials percent-encode @, : and /', () => {
+    const url = 'mongodb://us%40er:p%40ss%3A%2F@host1:27017,host2:27017/db';
+
+    expect(resolveMongoBinding({ url })).toEqual({ kind: 'url', url, dbName: 'db' });
+  });
+
+  it('accepts a mongodb+srv url', () => {
+    const url = 'mongodb+srv://user:pw@cluster0.example.net/db?retryWrites=true&w=majority';
+
+    expect(resolveMongoBinding({ url })).toEqual({ kind: 'url', url, dbName: 'db' });
+  });
+
+  it('accepts a seed list passed as { uri, dbName }', () => {
+    const uri = 'mongodb://host1:27017,host2:27017/?replicaSet=rs';
+
+    expect(resolveMongoBinding({ uri, dbName: 'app' })).toEqual({
+      kind: 'url',
+      url: uri,
+      dbName: 'app',
+    });
+  });
+
   it('rejects a seed list without a database name in the path', () => {
     expect(() => resolveMongoBinding({ url: 'mongodb://h1:27017,h2:27017' })).toThrow(
       expect.objectContaining({
         code: 'RUNTIME.BINDING_INVALID',
         message:
           'Mongo URL must include a database name in its path (e.g. mongodb://host:27017/mydb), or pass dbName explicitly',
+      }),
+    );
+  });
+
+  it.each([
+    ['a mongodb+srv url with several hosts', 'mongodb+srv://a.example.net,b.example.net/db'],
+    ['a mongodb+srv url with a port', 'mongodb+srv://cluster0.example.net:27017/db'],
+    ['an unescaped @ in the password', 'mongodb://user:p@ss@host1:27017,host2:27017/db'],
+    ['malformed percent-encoding in the password', 'mongodb://user:p%zz@host1:27017/db'],
+    ['a scheme without //', 'mongodb:host1/db'],
+  ])('rejects %s as an invalid URL', (_name, url) => {
+    expect(() => resolveMongoBinding({ url })).toThrow(
+      expect.objectContaining({
+        code: 'RUNTIME.BINDING_INVALID',
+        message: 'Mongo URL must be a valid URL',
+      }),
+    );
+  });
+
+  it('rejects an upper-case scheme, which the driver does not accept', () => {
+    expect(() => resolveMongoBinding({ url: 'MONGODB://host1:27017/db' })).toThrow(
+      expect.objectContaining({
+        code: 'RUNTIME.BINDING_INVALID',
+        message: 'Mongo URL must use mongodb:// or mongodb+srv://',
       }),
     );
   });

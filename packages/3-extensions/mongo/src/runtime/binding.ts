@@ -1,5 +1,6 @@
 import { InternalError } from '@internal/utils/internal-error';
 import type { MongoClient as MongoDriverClient } from 'mongodb';
+import { ConnectionString } from 'mongodb-connection-string-url';
 import { mongoError } from './mongo-errors';
 
 export type MongoBinding =
@@ -48,51 +49,31 @@ type MongoBindingFields = {
   readonly mongoClient?: MongoDriverClient;
 };
 
-const AUTHORITY_END_PATTERN = /[/?#]/;
+const URL_SCHEME_PATTERN = /^([a-z][a-z\d+.-]*):\/\//i;
+const MONGO_SCHEMES = new Set(['mongodb', 'mongodb+srv']);
 
-/**
- * `new URL` rejects a seed list like `host1:27017,host2:27017`, reading everything
- * after the first colon as the port. Only the scheme and database path matter here,
- * so parse without the extra hosts; the driver still receives the original URL.
- */
-function collapseSeedList(url: string): string {
-  const schemeEnd = url.indexOf('://');
-  if (schemeEnd === -1) {
-    return url;
-  }
-  const authorityStart = schemeEnd + 3;
-  const delimiter = url.slice(authorityStart).search(AUTHORITY_END_PATTERN);
-  const authorityEnd = delimiter === -1 ? url.length : authorityStart + delimiter;
-  const authority = url.slice(authorityStart, authorityEnd);
-  // A password may contain a comma, so only look for the seed list after the userinfo.
-  const comma = authority.indexOf(',', authority.lastIndexOf('@') + 1);
-  if (comma === -1) {
-    return url;
-  }
-  return url.slice(0, authorityStart + comma) + url.slice(authorityEnd);
-}
-
-function validateMongoUrl(url: string): URL {
+function validateMongoUrl(url: string): ConnectionString {
   const trimmed = url.trim();
   if (trimmed.length === 0) {
     throw mongoError('RUNTIME.BINDING_INVALID', 'Mongo URL must be a non-empty string');
   }
 
-  let parsed: URL;
-  try {
-    parsed = new URL(collapseSeedList(trimmed));
-  } catch {
+  const scheme = URL_SCHEME_PATTERN.exec(trimmed)?.[1];
+  if (scheme === undefined) {
     throw mongoError('RUNTIME.BINDING_INVALID', 'Mongo URL must be a valid URL');
   }
-
-  if (parsed.protocol !== 'mongodb:' && parsed.protocol !== 'mongodb+srv:') {
+  if (!MONGO_SCHEMES.has(scheme)) {
     throw mongoError('RUNTIME.BINDING_INVALID', 'Mongo URL must use mongodb:// or mongodb+srv://');
   }
 
-  return parsed;
+  try {
+    return new ConnectionString(trimmed);
+  } catch {
+    throw mongoError('RUNTIME.BINDING_INVALID', 'Mongo URL must be a valid URL');
+  }
 }
 
-function extractDbNameFromUrl(parsed: URL): string | undefined {
+function extractDbNameFromUrl(parsed: ConnectionString): string | undefined {
   // pathname is "/dbname" or "" — strip the leading slash. Anything past
   // a second slash is invalid for our purposes (auth-source style paths).
   const path = parsed.pathname.startsWith('/') ? parsed.pathname.slice(1) : parsed.pathname;
