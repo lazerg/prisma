@@ -1988,7 +1988,7 @@ class CollectionImpl<
   async upsert(
     input: {
       create: ResolvedScalarCreateInput<TContract, ModelName, State['variantName'], State['nsId']>;
-      update: Partial<DefaultModelInputRow<TContract, ModelName>>;
+      update: Partial<DefaultModelInputRow<TContract, ModelName, State['nsId']>>;
       conflictOn?: UniqueConstraintCriterion<TContract, ModelName>;
     },
     configure?: (meta: MetaBuilder<'write'>) => void,
