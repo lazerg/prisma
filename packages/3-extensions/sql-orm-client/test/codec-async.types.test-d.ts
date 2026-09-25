@@ -166,13 +166,13 @@ test('no ShorthandWhereFilter field position resolves to a Promise<T>', () => {
 
 // Read and write surfaces resolve to the same plain field types here: `CreateInput` and `MutationUpdateInput` are derived from `DefaultModelInputRow` (the codec `input` map) and `DefaultModelRow` from the `output` map, which agree for these codecs. The assertions below pin the field types to a single shape so that any future drift (e.g. `Promise<T>` shapes on the write side) would break this test.
 
-test('CreateInput field types match DefaultModelRow field types (one type-map)', () => {
+test('CreateInput field types match DefaultModelRow field types for these codecs', () => {
   expectTypeOf<NonNullable<UserCreate['name']>>().toEqualTypeOf<UserRow['name']>();
   expectTypeOf<NonNullable<UserCreate['email']>>().toEqualTypeOf<UserRow['email']>();
   expectTypeOf<UserCreate['address']>().toEqualTypeOf<UserRow['address'] | undefined>();
 });
 
-test('MutationUpdateInput field types match DefaultModelRow field types (one type-map)', () => {
+test('MutationUpdateInput field types match DefaultModelRow field types for these codecs', () => {
   expectTypeOf<NonNullable<UserUpdate['name']>>().toEqualTypeOf<UserRow['name']>();
   expectTypeOf<NonNullable<UserUpdate['email']>>().toEqualTypeOf<UserRow['email']>();
   expectTypeOf<UserUpdate['address']>().toEqualTypeOf<UserRow['address'] | undefined>();

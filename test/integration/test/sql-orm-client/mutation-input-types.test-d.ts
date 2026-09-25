@@ -8,21 +8,23 @@ declare const tags: Collection<Contract, 'Tag'>;
 const id = '123e4567-e89b-12d3-a456-426614174000';
 
 describe('ORM writes take the codec input type', () => {
-  test('create and createAll accept a plain string for a char column', () => {
-    expectTypeOf(tags.create({ id, name: 'rust' })).resolves.toHaveProperty('id');
-    expectTypeOf(tags.createAll([{ id, name: 'rust' }])).toHaveProperty('then');
+  test('create and createAll accept a plain string for a char column', async () => {
+    await tags.create({ id, name: 'rust' });
+    await tags.createAll([{ id, name: 'rust' }]);
   });
 
-  test('upsert accepts a plain string for a char column', () => {
-    expectTypeOf(
-      tags.upsert({ create: { id, name: 'rust' }, update: { id }, conflictOn: { name: 'rust' } }),
-    ).resolves.toHaveProperty('id');
+  test('upsert accepts a plain string for a char column', async () => {
+    await tags.upsert({
+      create: { id, name: 'rust' },
+      update: { id },
+      conflictOn: { name: 'rust' },
+    });
   });
 
-  test('update, updateAll and updateAndCount accept a plain string for a char column', () => {
+  test('update, updateAll and updateAndCount accept a plain string for a char column', async () => {
     const filtered = tags.where({ name: 'rust' });
-    expectTypeOf(filtered.update({ id })).toHaveProperty('then');
-    expectTypeOf(filtered.updateAll({ id })).toHaveProperty('then');
+    await filtered.update({ id });
+    await filtered.updateAll({ id });
     expectTypeOf(filtered.updateAndCount({ id })).resolves.toEqualTypeOf<number>();
   });
 
