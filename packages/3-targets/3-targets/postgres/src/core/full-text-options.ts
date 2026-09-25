@@ -40,7 +40,7 @@ export interface FullTextHeadlineOptions extends FullTextMatchesOptions {
   readonly stopSel?: string;
   /** Longest headline, in words. */
   readonly maxWords?: number;
-  /** Shortest headline, in words; below `maxWords` when both are given. */
+  /** Shortest headline, in words; below `maxWords`, which Postgres defaults to 35. */
   readonly minWords?: number;
   /** Mark up the whole document rather than extracting fragments. */
   readonly highlightAll?: boolean;
@@ -92,6 +92,10 @@ function checkWordCount(method: string, argument: string, value: number): void {
   }
 }
 
+/** `ts_headline`'s own defaults for `MinWords` and `MaxWords`. */
+const DEFAULT_MIN_WORDS = 15;
+const DEFAULT_MAX_WORDS = 35;
+
 /** Non-empty, and none of `"` `,` `=` `\` or whitespace. */
 const MARKER = /^[^"=,\\\s]+$/;
 
@@ -130,16 +134,19 @@ export function headlineOptionsLiteral(
   }
   if (options.minWords !== undefined) {
     checkWordCount(method, 'minWords', options.minWords);
-    if (options.maxWords !== undefined && options.minWords >= options.maxWords) {
-      throw invalid(
-        method,
-        'minWords',
-        options.minWords,
-        `minWords (${options.minWords}) must be below maxWords (${options.maxWords}).`,
-        'Postgres requires MinWords strictly below MaxWords. Lower minWords, or raise maxWords.',
-      );
-    }
     pairs.push(`MinWords=${options.minWords}`);
+  }
+  const minWords = options.minWords ?? DEFAULT_MIN_WORDS;
+  const maxWords = options.maxWords ?? DEFAULT_MAX_WORDS;
+  if (options.highlightAll !== true && minWords >= maxWords) {
+    const argument = options.minWords === undefined ? 'maxWords' : 'minWords';
+    throw invalid(
+      method,
+      argument,
+      options[argument],
+      `minWords (${minWords}) must be below maxWords (${maxWords}).`,
+      `Postgres requires MinWords strictly below MaxWords, and defaults them to ${DEFAULT_MIN_WORDS} and ${DEFAULT_MAX_WORDS}. Lower minWords, or raise maxWords.`,
+    );
   }
   if (options.highlightAll !== undefined) {
     if (typeof options.highlightAll !== 'boolean') {
