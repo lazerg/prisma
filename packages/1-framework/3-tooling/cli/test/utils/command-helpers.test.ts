@@ -138,6 +138,21 @@ describe('sanitizeErrorMessage', () => {
     expect(sanitized).not.toContain('supersecret');
   });
 
+  it('masks a password query parameter value where the message names it on its own', () => {
+    const url = 'postgresql://admin:s3cret@localhost:5432/mydb?sslpassword=sslkey&sslmode=require';
+    const message = 'could not decrypt SSL key with password=sslkey (sslmode=require)';
+
+    expect(sanitizeErrorMessage(message, url)).toBe(
+      'could not decrypt SSL key with password=**** (sslmode=require)',
+    );
+  });
+
+  it('masks a secret whole when another secret is part of it', () => {
+    const url = 'postgresql://admin:secret@localhost:5432/mydb?sslpassword=sslsecret';
+
+    expect(sanitizeErrorMessage('bad SSL key sslsecret', url)).toBe('bad SSL key ****');
+  });
+
   it('handles libpq-style connection strings in messages', () => {
     const url = 'host=localhost password=secret user=admin dbname=mydb';
     const message = 'Failed to connect: host=localhost password=secret user=admin';
@@ -169,6 +184,14 @@ describe('sanitizeErrorMessage', () => {
 
       expect(sanitizeErrorMessage('auth failed for user "admin" with secret', url)).toBe(
         'auth failed for user "****" with ****',
+      );
+    });
+
+    it('masks a password query parameter value where the message names it on its own', () => {
+      const url = 'postgresql://admin@h1:5432,h2:5432/mydb?sslpassword=sslsecret&sslmode=require';
+
+      expect(sanitizeErrorMessage(`bad SSL key sslsecret for ${url}`, url)).toBe(
+        'bad SSL key **** for postgresql://****@h1:5432,h2:5432/mydb?sslpassword=****&sslmode=require',
       );
     });
 

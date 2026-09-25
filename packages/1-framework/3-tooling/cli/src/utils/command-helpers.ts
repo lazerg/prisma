@@ -9,10 +9,12 @@ import type { ControlClient } from '../control-api/types';
 import { CliStructuredError, errorRuntime } from './cli-errors';
 import {
   hasUrlScheme,
+  passwordQueryValues,
   redactUrlCredentials,
-  type UrlUserinfo,
   urlUserinfo,
 } from './url-credentials';
+
+const PASSWORD_QUERY_KEY = /password/i;
 
 /**
  * Resolves the absolute path to contract.json from the config.
@@ -215,7 +217,7 @@ export function maskConnectionUrl(url: string): string {
     }
     // Also mask password in query parameters (e.g., ?password=secret, ?sslpassword=secret)
     for (const key of [...parsed.searchParams.keys()]) {
-      if (/password/i.test(key)) {
+      if (PASSWORD_QUERY_KEY.test(key)) {
         parsed.searchParams.set(key, '****');
       }
     }
@@ -233,27 +235,35 @@ export function sanitizeErrorMessage(message: string, connectionUrl?: string): s
   if (!connectionUrl) {
     return message;
   }
-  const credentials = connectionUrlCredentials(connectionUrl);
-  if (credentials === undefined) {
+  const secrets = connectionUrlSecrets(connectionUrl);
+  if (secrets === undefined) {
     return maskKeyValueCredentials(message);
   }
   let sanitized = message.replaceAll(connectionUrl, maskConnectionUrl(connectionUrl));
-  if (credentials.password) {
-    sanitized = sanitized.replaceAll(credentials.password, '****');
-  }
-  if (credentials.username) {
-    sanitized = sanitized.replaceAll(credentials.username, '****');
+  for (const secret of secrets.filter(Boolean).sort(longestFirst)) {
+    sanitized = sanitized.replaceAll(secret, '****');
   }
   return sanitized;
 }
 
-function connectionUrlCredentials(connectionUrl: string): UrlUserinfo | undefined {
+function connectionUrlSecrets(connectionUrl: string): string[] | undefined {
   try {
-    const { username, password } = new URL(connectionUrl);
-    return { username, password };
+    const { username, password, searchParams } = new URL(connectionUrl);
+    const queryPasswords = [...searchParams]
+      .filter(([key]) => PASSWORD_QUERY_KEY.test(key))
+      .map(([, value]) => value);
+    return [username, password, ...queryPasswords];
   } catch {
-    return hasUrlScheme(connectionUrl) ? urlUserinfo(connectionUrl) : undefined;
+    if (!hasUrlScheme(connectionUrl)) {
+      return undefined;
+    }
+    const { username, password } = urlUserinfo(connectionUrl);
+    return [username, password, ...passwordQueryValues(connectionUrl)];
   }
+}
+
+function longestFirst(a: string, b: string): number {
+  return b.length - a.length;
 }
 
 function maskKeyValueCredentials(text: string): string {

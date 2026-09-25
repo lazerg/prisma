@@ -2,7 +2,7 @@ const MASK = '****';
 const URL_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//;
 const LEADING_URL_USERINFO = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/([^/?#\s]+)@/;
 const URL_USERINFO = /([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)([^/?#\s]+)@/g;
-const PASSWORD_QUERY_PARAMETER = /([?&][^=&#\s]*password[^=&#\s]*=)[^&#\s]*/gi;
+const PASSWORD_QUERY_PARAMETER = /([?&][^=&#\s]*password[^=&#\s]*=)([^&#\s]*)/gi;
 
 export interface UrlUserinfo {
   readonly username: string;
@@ -20,6 +20,14 @@ export function hasUrlScheme(text: string): boolean {
  */
 export function urlUserinfo(url: string): UrlUserinfo {
   return splitUserinfo(url.match(LEADING_URL_USERINFO)?.[1] ?? '');
+}
+
+/**
+ * Reads the values of the query parameters whose key contains `password`, the same ones
+ * `redactUrlCredentials` masks, without parsing hosts.
+ */
+export function passwordQueryValues(url: string): string[] {
+  return [...url.matchAll(PASSWORD_QUERY_PARAMETER)].map((match) => match[2] ?? '');
 }
 
 /**
