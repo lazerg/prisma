@@ -38,9 +38,12 @@ export interface FullTextHeadlineOptions extends FullTextMatchesOptions {
   readonly startSel?: string;
   /** Markup placed after each match. */
   readonly stopSel?: string;
-  /** Longest headline, in words. */
+  /** Longest headline, in words. Postgres defaults to 35. */
   readonly maxWords?: number;
-  /** Shortest headline, in words; below `maxWords`, which Postgres defaults to 35. */
+  /**
+   * Shortest headline, in words. Postgres defaults to 15. Below `maxWords` unless `highlightAll`
+   * is set.
+   */
   readonly minWords?: number;
   /** Mark up the whole document rather than extracting fragments. */
   readonly highlightAll?: boolean;
@@ -136,18 +139,6 @@ export function headlineOptionsLiteral(
     checkWordCount(method, 'minWords', options.minWords);
     pairs.push(`MinWords=${options.minWords}`);
   }
-  const minWords = options.minWords ?? DEFAULT_MIN_WORDS;
-  const maxWords = options.maxWords ?? DEFAULT_MAX_WORDS;
-  if (options.highlightAll !== true && minWords >= maxWords) {
-    const argument = options.minWords === undefined ? 'maxWords' : 'minWords';
-    throw invalid(
-      method,
-      argument,
-      options[argument],
-      `minWords (${minWords}) must be below maxWords (${maxWords}).`,
-      `Postgres requires MinWords strictly below MaxWords, and defaults them to ${DEFAULT_MIN_WORDS} and ${DEFAULT_MAX_WORDS}. Lower minWords, or raise maxWords.`,
-    );
-  }
   if (options.highlightAll !== undefined) {
     if (typeof options.highlightAll !== 'boolean') {
       throw invalid(
@@ -159,6 +150,18 @@ export function headlineOptionsLiteral(
       );
     }
     pairs.push(`HighlightAll=${options.highlightAll}`);
+  }
+  const minWords = options.minWords ?? DEFAULT_MIN_WORDS;
+  const maxWords = options.maxWords ?? DEFAULT_MAX_WORDS;
+  if (options.highlightAll !== true && minWords >= maxWords) {
+    const argument = options.minWords === undefined ? 'maxWords' : 'minWords';
+    throw invalid(
+      method,
+      argument,
+      options[argument],
+      `minWords (${minWords}) must be below maxWords (${maxWords}).`,
+      `Postgres requires MinWords strictly below MaxWords, and defaults them to ${DEFAULT_MIN_WORDS} and ${DEFAULT_MAX_WORDS}. Lower minWords, or raise maxWords.`,
+    );
   }
   return pairs.length === 0 ? undefined : LiteralExpr.of(pairs.join(', '));
 }

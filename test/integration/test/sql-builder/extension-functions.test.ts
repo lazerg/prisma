@@ -338,7 +338,7 @@ describe('integration: full-text search', { timeout: timeouts.databaseOperation 
       db()
         .public.comments.select('id')
         .select('snippet', (f, fns) =>
-          fns.fullTextHeadline(f.body, fns.websearchToTsquery('alice'), { minWords: 36 }),
+          fns.fullTextHeadline(f.body, fns.websearchToTsquery('alice'), { minWords: 35 }),
         )
         .build(),
     ).toThrow(expect.objectContaining({ code: 'RUNTIME.ARGUMENT_INVALID' }));
