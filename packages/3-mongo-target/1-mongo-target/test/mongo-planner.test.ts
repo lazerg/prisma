@@ -41,6 +41,8 @@ const ADDITIVE_ONLY_POLICY: MigrationOperationPolicy = {
   allowedOperationClasses: ['additive'],
 };
 
+const JSON_BSON_TYPES = ['object', 'array', 'string', 'double', 'int', 'long', 'bool', 'null'];
+
 type MongoCollectionData = {
   readonly indexes?: readonly (MongoIndex | MongoIndexInput)[];
   readonly validator?: MongoValidator | MongoValidatorInput;
@@ -830,8 +832,6 @@ describe('MongoMigrationPlanner', () => {
       expect(collModOps).toHaveLength(1);
       expect(collModOps[0]!.operationClass).toBe('destructive');
     });
-
-    const JSON_BSON_TYPES = ['object', 'array', 'string', 'double', 'int', 'long', 'bool', 'null'];
 
     it.each([
       ['a Json field to Bson', { bsonType: JSON_BSON_TYPES }, {}],
