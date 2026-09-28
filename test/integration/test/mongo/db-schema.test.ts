@@ -134,7 +134,9 @@ describe('db schema for Mongo (end-to-end)', { timeout: timeouts.spinUpMongoMemo
           bsonType: 'object',
           required: ['payload'],
           properties: {
-            payload: { bsonType: ['object', 'array', 'string', 'double', 'bool', 'null'] },
+            payload: {
+              bsonType: ['object', 'array', 'string', 'double', 'int', 'long', 'bool', 'null'],
+            },
             note: { bsonType: ['null', 'string'] },
           },
         },
@@ -148,7 +150,7 @@ describe('db schema for Mongo (end-to-end)', { timeout: timeouts.spinUpMongoMemo
     const eventsNode = view.root.children!.find((n) => n.label === 'collection events');
     const validatorNode = eventsNode!.children!.find((n) => n.id === 'validator-events');
     expect(validatorNode!.children!.map((n) => n.label)).toEqual([
-      'payload: object | array | string | double | bool | null (required)',
+      'payload: object | array | string | double | int | long | bool | null (required)',
       'note: null | string',
     ]);
   });

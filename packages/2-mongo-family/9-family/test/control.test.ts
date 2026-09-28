@@ -418,7 +418,9 @@ describe('toSchemaView', () => {
             bsonType: 'object',
             required: ['meta'],
             properties: {
-              meta: { bsonType: ['object', 'array', 'string', 'double', 'bool', 'null'] },
+              meta: {
+                bsonType: ['object', 'array', 'string', 'double', 'int', 'long', 'bool', 'null'],
+              },
               subtitle: { bsonType: ['null', 'string'] },
             },
           },
@@ -434,7 +436,7 @@ describe('toSchemaView', () => {
       (n) => n.id === 'validator-posts',
     )!;
     expect(validatorNode.children!.map((n) => n.label)).toEqual([
-      'meta: object | array | string | double | bool | null (required)',
+      'meta: object | array | string | double | int | long | bool | null (required)',
       'subtitle: null | string',
     ]);
   });
