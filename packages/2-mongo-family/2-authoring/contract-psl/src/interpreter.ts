@@ -1029,6 +1029,7 @@ function resolveNonRelationField(
   compositeTypeNames: ReadonlySet<string>,
   scalarTypeCodecIds: ReadonlyMap<string, string>,
   codecIdByEnumName: ReadonlyMap<string, string>,
+  codecLookup: CodecLookup | undefined,
   presetContext: FieldPresetContext,
   warnDeprecatedScalar: (field: FieldSymbol) => void,
 ): ResolvedNonRelationField | undefined {
@@ -1086,6 +1087,15 @@ function resolveNonRelationField(
     diagnostics.push({
       code: 'PSL_UNSUPPORTED_FIELD_TYPE',
       message: `Field "${ownerName}.${field.name}" type "${field.typeName}" is not supported in Mongo PSL interpreter`,
+      ...diagnosticSource(sources, field.node.syntax).at(field.span),
+    });
+    return undefined;
+  }
+
+  if (codecLookup !== undefined && codecLookup.targetTypesFor(codecId) === undefined) {
+    diagnostics.push({
+      code: 'PSL_UNKNOWN_FIELD_CODEC',
+      message: `Field "${ownerName}.${field.name}" type "${field.typeName}" uses codec "${codecId}", which is not registered by any composed component`,
       ...diagnosticSource(sources, field.node.syntax).at(field.span),
     });
     return undefined;
@@ -1355,6 +1365,7 @@ export function interpretPslDocumentToMongoContract(
         compositeTypeNames,
         scalarTypeCodecIds,
         codecIdByEnumName,
+        codecLookup,
         presetContext,
         warnDeprecatedScalar,
       );
@@ -1454,6 +1465,7 @@ export function interpretPslDocumentToMongoContract(
         compositeTypeNames,
         scalarTypeCodecIds,
         codecIdByEnumName,
+        codecLookup,
         presetContext,
         warnDeprecatedScalar,
       );
