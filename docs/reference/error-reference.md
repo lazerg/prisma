@@ -835,7 +835,7 @@ Two Mongo models stored in the same collection declare field presets with differ
 
 ### PSL_UNKNOWN_FIELD_CODEC
 
-A Mongo model or composite type field has a type whose codec no composed component registers, for example a type contributed by a pack whose codecs are missing from the stack: `Field "<Model>.<field>" type "<Type>" uses codec "<codecId>", which is not registered by any composed component`. The collection's `$jsonSchema` validator is closed, so a field it cannot describe would make MongoDB reject every document that carries it. Add the pack that registers the codec to `extensions`. Reported at the field.
+A Mongo model or composite type field, or a field preset, has a type whose codec no composed component registers, for example a type contributed by a pack that does not also register its codec: `Field "<Model>.<field>" type "<Type>" uses codec "<codecId>", which is not registered by any composed component`. The collection's `$jsonSchema` validator is closed, so a field it cannot describe would make MongoDB reject every document that carries it. Register the codec in a component the stack composes, or add to `extensions` a pack that registers it. Reported at the field.
 
 ## ORM
 

@@ -1018,6 +1018,24 @@ function resolvePresetExecutionDefaults(input: {
   return resolved;
 }
 
+function isKnownFieldCodec(
+  field: FieldSymbol,
+  ownerName: string,
+  codecId: string,
+  codecLookup: CodecLookup | undefined,
+  { sources, diagnostics }: FieldPresetContext,
+): boolean {
+  if (codecLookup === undefined || codecLookup.targetTypesFor(codecId) !== undefined) {
+    return true;
+  }
+  diagnostics.push({
+    code: 'PSL_UNKNOWN_FIELD_CODEC',
+    message: `Field "${ownerName}.${field.name}" type "${field.typeName}" uses codec "${codecId}", which is not registered by any composed component`,
+    ...diagnosticSource(sources, field.node.syntax).at(field.span),
+  });
+  return false;
+}
+
 interface ResolvedNonRelationField {
   readonly field: ContractField;
   readonly executionDefaults?: ExecutionMutationDefaultPhases;
@@ -1076,6 +1094,12 @@ function resolveNonRelationField(
     return undefined;
   }
   if (preset.kind === 'preset') {
+    if (
+      preset.field.type.kind === 'scalar' &&
+      !isKnownFieldCodec(field, ownerName, preset.field.type.codecId, codecLookup, presetContext)
+    ) {
+      return undefined;
+    }
     return {
       field: preset.field,
       ...ifDefined('executionDefaults', preset.executionDefaults),
@@ -1092,12 +1116,7 @@ function resolveNonRelationField(
     return undefined;
   }
 
-  if (codecLookup !== undefined && codecLookup.targetTypesFor(codecId) === undefined) {
-    diagnostics.push({
-      code: 'PSL_UNKNOWN_FIELD_CODEC',
-      message: `Field "${ownerName}.${field.name}" type "${field.typeName}" uses codec "${codecId}", which is not registered by any composed component`,
-      ...diagnosticSource(sources, field.node.syntax).at(field.span),
-    });
+  if (!isKnownFieldCodec(field, ownerName, codecId, codecLookup, presetContext)) {
     return undefined;
   }
 

@@ -1,3 +1,7 @@
+import {
+  type AuthoringContributions,
+  temporalAuthoringPresets,
+} from '@internal/framework-components/authoring';
 import type { CodecLookup } from '@internal/framework-components/codec';
 import { buildSymbolTable } from '@internal/psl-parser';
 import { parse } from '@internal/psl-parser/syntax';
@@ -28,7 +32,7 @@ const codecLookup: CodecLookup = {
   renderOutputTypeFor: () => undefined,
 };
 
-function interpret(schema: string) {
+function interpret(schema: string, authoringContributions?: AuthoringContributions) {
   const { document, sources } = parse(schema, 'unknown-codec.prisma');
   const { symbolTable } = buildSymbolTable({
     documents: [document],
@@ -42,6 +46,7 @@ function interpret(schema: string) {
     scalarTypeCodecIds,
     controlMutationDefaults: { dataTypeEntries: {}, defaultFunctionRegistry: new Map() },
     codecLookup,
+    ...(authoringContributions ? { authoringContributions } : {}),
   });
 }
 
@@ -82,6 +87,30 @@ model Order {
       expect.objectContaining({
         code: 'PSL_UNKNOWN_FIELD_CODEC',
         message: expect.stringContaining('Field "Line.total" type "Money"'),
+      }),
+    ]);
+  });
+
+  it('reports a field preset', () => {
+    const result = interpret(
+      `model Order {
+  id        ObjectId             @id @map("_id")
+  createdAt temporal.createdAt()
+}
+`,
+      {
+        field: {
+          temporal: temporalAuthoringPresets({ codecId: 'clock/instant@1', nativeType: 'date' }),
+        },
+      },
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.failure.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'PSL_UNKNOWN_FIELD_CODEC',
+        message: expect.stringContaining('Field "Order.createdAt"'),
       }),
     ]);
   });
